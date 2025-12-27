@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wanderer Admin | Dashboard</title>
+    <style>
+        :root { 
+            --primary: #F56A6A; 
+            --dark: #1a1a1a; 
+            --bg: #f4f7f6; 
+            --success: #27ae60;
+        }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); margin: 0; padding: 40px; }
+        
+        .admin-container { 
+            max-width: 1100px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 30px; 
+            border-radius: 20px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05); 
+        }
+
+        .header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 30px; 
+            border-bottom: 2px solid #eee;
+            padding-bottom: 20px;
+        }
+
+        h1 { margin: 0; color: var(--dark); font-size: 24px; }
+        
+        .btn-home { 
+            text-decoration: none; 
+            font-size: 14px; 
+            color: var(--primary); 
+            font-weight: bold; 
+            border: 1px solid var(--primary);
+            padding: 8px 15px;
+            border-radius: 8px;
+            transition: 0.3s;
+        }
+        .btn-home:hover { background: var(--primary); color: white; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { 
+            text-align: left; 
+            padding: 15px; 
+            background: #f8f8f8; 
+            color: #888; 
+            text-transform: uppercase; 
+            font-size: 11px; 
+            letter-spacing: 1px;
+        }
+        td { padding: 15px; border-bottom: 1px solid #eee; font-size: 14px; color: #444; }
+        
+        .status-badge { 
+            padding: 5px 12px; 
+            border-radius: 50px; 
+            font-size: 11px; 
+            font-weight: bold; 
+            text-transform: uppercase;
+        }
+        
+        .status-pending { background: #fff4e5; color: #ff9800; }
+        .status-confirmed { background: #d1fae5; color: #065f46; }
+
+        .action-link {
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: bold;
+            color: #2563eb;
+            background: #eff6ff;
+            padding: 5px 10px;
+            border-radius: 5px;
+            transition: 0.2s;
+        }
+        .action-link:hover { background: #dbeafe; }
+
+        .empty-state { text-align: center; padding: 60px; color: #aaa; }
+    </style>
+</head>
+<body>
+
+    <div class="admin-container">
+        <div class="header">
+            <h1>Traveler Bookings Dashboard</h1>
+            <a href="/" class="btn-home">← Back to Website</a>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Traveler</th>
+                    <th>Email</th>
+                    <th>Trip</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for booking in bookings %}
+                <tr>
+                    <td style="color: #888; font-size: 12px;">{{ booking.date }}</td>
+                    <td><strong>{{ booking.name }}</strong></td>
+                    <td>{{ booking.email }}</td>
+                    <td>{{ booking.trip }}</td>
+                    <td>
+                        <span class="status-badge {% if booking.status == 'Confirmed' %}status-confirmed{% else %}status-pending{% endif %}">
+                            {{ booking.status }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if booking.status != 'Confirmed' %}
+                        <a href="/update-status/{{ booking._id }}/Confirmed?pass=wanderer2025" class="action-link">
+                            ✅ Confirm Payment
+                        </a>
+                        {% else %}
+                        <span style="color: var(--success); font-size: 12px;">✓ Completed</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="empty-state">
+                        <div style="font-size: 40px; margin-bottom: 10px;">⛺</div>
+                        No bookings found in the cloud database.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</body>
+</html>

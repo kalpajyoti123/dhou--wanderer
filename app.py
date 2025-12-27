@@ -1,72 +1,112 @@
-from flask import Flask, render_template, request, flash, redirect, url_for
+import datetime
+import os
+from dotenv import load_dotenv
+from flask import Flask, render_template, request, redirect, url_for
 from flask_mail import Mail, Message
+from pymongo import MongoClient
+from bson.objectid import ObjectId
+
+load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = "dhou_wanderer_key_2025"
+app.secret_key = os.getenv("SECRET_KEY")
 
-# --- EMAIL CONFIGURATION ---
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = 'dhouwanderer@gmail.com'
-# UPDATED PASSWORD: wemm vgfm hmsv ycij
-app.config['MAIL_PASSWORD'] = 'wemm vgfm hmsv ycij' 
-app.config['MAIL_DEFAULT_SENDER'] = ('Wanderer Travels', 'dhouwanderer@gmail.com')
+# --- 1. MONGODB ATLAS CONNECTION ---
+# Using your provided connection string
+MONGO_URI = os.getenv("MONGO_URI")
 
+try:
+    client = MongoClient(MONGO_URI)
+    # Testing the connection
+    client.admin.command('ping')
+    print("✅ Successfully connected to MongoDB Atlas!")
+    db = client['dhou-wanderer']
+    bookings_collection = db['bookings']
+except Exception as e:
+    print(f"❌ MongoDB Connection Error: {e}")
+
+# --- 2. EMAIL CONFIGURATION ---
+app.config.update(
+    MAIL_SERVER='smtp.gmail.com',
+    MAIL_PORT=587,
+    MAIL_USE_TLS=True,
+    MAIL_USERNAME=os.getenv("MAIL_USERNAME"),
+    MAIL_PASSWORD=os.getenv("MAIL_PASSWORD")
+)
 mail = Mail(app)
 
-# --- ROUTES ---
+# --- 3. ROUTES ---
 
 @app.route('/')
 def home():
-    """Main Landing Page"""
     return render_template('index.html')
 
 @app.route('/itinerary/<trip_name>')
 def trip_details(trip_name):
-    """Dynamic Route for Destinations"""
     formatted_name = trip_name.replace('-', ' ').title()
     return render_template('details.html', trip=formatted_name)
 
 @app.route('/book', methods=['POST'])
 def book_trip():
-    """Handles Form Submission, Emailing, and Payment Redirect"""
-    destination = request.form.get('destination', 'Unknown Expedition')
-    user_name = request.form.get('full_name', 'Valued Traveler')
+    destination = request.form.get('destination')
+    user_name = request.form.get('full_name')
     user_email = request.form.get('email')
-    return redirect(url_for('payment_page', trip=request.form.get('destination'), amount="15000"))
-
-    if not user_email:
-        flash("Error: Email address is required.")
-        return redirect(url_for('home'))
-
-    # 1. Send HTML Confirmation Email to User
-    msg = Message(f"Booking Received: {destination}", recipients=[user_email])
-    msg.html = render_template('emails/booking_confirmation.html', 
-                               name=user_name, 
-                               trip=destination)
     
-    # 2. Send Notification Email to You
-    admin_msg = Message("NEW BOOKING ALERT", recipients=['dhouwanderer@gmail.com'])
-    admin_msg.body = f"New booking request!\n\nName: {user_name}\nEmail: {user_email}\nTrip: {destination}"
-
+    # SAVE to MongoDB Atlas
+    booking_data = {
+        'name': user_name,
+        'email': user_email,
+        'trip': destination,
+        'status': 'Pending',
+        'date': datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    }
+    
     try:
+        bookings_collection.insert_one(booking_data)
+    except Exception as e:
+        print(f"Database Insert Error: {e}")
+
+    # SEND Emails
+    try:
+        msg = Message(f"Booking Received: {destination}", recipients=[user_email])
+        msg.html = render_template('emails/booking_confirmation.html', name=user_name, trip=destination)
         mail.send(msg)
-        mail.send(admin_msg)
     except Exception as e:
         print(f"Email Error: {e}")
-        # We proceed to payment even if email fails to keep the user in the funnel
 
-    # 3. Redirect to Payment Page
-    # Defaulting amount to 15000 for the expedition deposit
     return redirect(url_for('payment_page', trip=destination, amount="15000"))
 
 @app.route('/payment')
 def payment_page():
-    """Final Payment Screen"""
-    trip = request.args.get('trip', 'Expedition')
-    amount = request.args.get('amount', '15000')
+    trip = request.args.get('trip')
+    amount = request.args.get('amount')
     return render_template('payment.html', trip=trip, amount=amount)
+
+@app.route('/admin-dashboard')
+def admin_page():
+    # Security: Access via /admin-dashboard?pass=wanderer2025
+    if request.args.get('pass') != os.getenv("ADMIN_PASS"):
+        return "Unauthorized Access", 403
+    
+    try:
+        # Pull from MongoDB and sort by newest first
+        all_bookings = list(bookings_collection.find().sort('_id', -1))
+    except Exception as e:
+        print(f"Fetch Error: {e}")
+        all_bookings = []
+        
+    return render_template('admin.html', bookings=all_bookings)
+
+@app.route('/update-status/<booking_id>/<new_status>')
+def update_status(booking_id, new_status):
+    if request.args.get('pass') != os.getenv("ADMIN_PASS"):
+        return "Unauthorized", 403
+        
+    bookings_collection.update_one(
+        {'_id': ObjectId(booking_id)},
+        {'$set': {'status': new_status}}
+    )
+    return redirect(url_for('admin_page', **{'pass': os.getenv("ADMIN_PASS")}))
+
 if __name__ == '__main__':
-    # host='0.0.0.0' allows other devices on the network to connect
     app.run(debug=True, host='0.0.0.0')
