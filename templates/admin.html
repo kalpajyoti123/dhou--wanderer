@@ -102,37 +102,22 @@
                     <th>Actions</th>
                 </tr>
             </thead>
-            <tbody>
-                {% for booking in bookings %}
-                <tr>
-                    <td style="color: #888; font-size: 12px;">{{ booking.date }}</td>
-                    <td><strong>{{ booking.name }}</strong></td>
-                    <td>{{ booking.email }}</td>
-                    <td>{{ booking.trip }}</td>
-                    <td>
-                        <span class="status-badge {% if booking.status == 'Confirmed' %}status-confirmed{% else %}status-pending{% endif %}">
-                            {{ booking.status }}
-                        </span>
-                    </td>
-                    <td>
-                        {% if booking.status != 'Confirmed' %}
-                        <a href="/update-status/{{ booking._id }}/Confirmed?pass=wanderer2025" class="action-link">
-                            ✅ Confirm Payment
-                        </a>
-                        {% else %}
-                        <span style="color: var(--success); font-size: 12px;">✓ Completed</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="6" class="empty-state">
-                        <div style="font-size: 40px; margin-bottom: 10px;">⛺</div>
-                        No bookings found in the cloud database.
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
+           <tbody>
+    {% for booking in bookings %}
+    <tr>
+        <td>{{ booking.date }}</td>
+        <td><strong>{{ booking.name }}</strong></td>
+        <td>{{ booking.email }}</td>
+        <td>{{ booking.trip }}</td>
+        <td>{{ booking.status }}</td>
+        <td>
+            {% if booking.status != 'Confirmed' %}
+            <a href="/update-status/{{ booking._id }}/Confirmed?pass=wanderer2025">✅ Confirm</a>
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+</tbody>
         </table>
     </div>
 

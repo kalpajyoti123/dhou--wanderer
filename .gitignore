@@ -2,4 +2,12 @@ __pycache__/
 *.pyc
 .env
 .DS_Store
-venv/
+venv/<!-- Example of correct structure -->
+<table>
+    {% for booking in bookings %}
+        <tr>
+            <td>{{ booking.name }}</td>
+            <!-- ... other columns ... -->
+        </tr>
+    {% endfor %}  <!-- Make sure this isn't duplicated -->
+</table>
