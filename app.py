@@ -123,7 +123,7 @@ def update_status(booking_id, new_status):
         {'_id': ObjectId(booking_id)},
         {'$set': {'status': new_status}}
     )
-    return redirect(url_for('admin_page', pass="wanderer2025"))
+    return redirect(url_for('admin_page', **{'pass': 'wanderer2025'}))
 
 # --- 6. LAUNCH ---
 if __name__ == '__main__':
